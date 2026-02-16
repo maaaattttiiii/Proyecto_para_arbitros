@@ -1,3 +1,84 @@
+from fpdf import FPDF
+
+def generar_reporte():
+    print("\n--- GENERAR REPORTE PDF ---")
+    dni = input("Ingrese el DNI del árbitro: ")
+    
+    if dni not in colegio:
+        print(" Árbitro no encontrado.")
+        return
+
+    # Recuperamos los datos de la "Caja Grande"
+    datos = colegio[dni]
+    nombre_completo = f"{datos['nombre']} {datos['apellido']}"
+    
+    # --- CREACIÓN DEL PDF ---
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    # 1. TÍTULO Y DATOS PERSONALES
+    pdf.set_font("Arial", style="B", size=16)
+    pdf.cell(200, 10, txt=f"Ficha Técnica: {nombre_completo}", ln=1, align='C')
+    
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt=f"DNI: {dni} - Categoría: {datos['categoria']}", ln=1, align='C')
+    pdf.ln(10) # Salto de línea
+
+    # 2. SECCIÓN PAGOS (Diccionario)
+    pdf.set_font("Arial", style="B", size=14)
+    pdf.cell(200, 10, txt="Estado de Pagos (10%)", ln=1)
+    pdf.set_font("Arial", size=12)
+    
+    if not datos['pagos']:
+        pdf.cell(200, 10, txt="No hay registros de pago.", ln=1)
+    else:
+        # Recorremos el diccionario de pagos
+        for fecha, estado in datos['pagos'].items():
+            texto_estado = "A tiempo" if estado else " Debe/Tarde"
+            pdf.cell(200, 10, txt=f"Fecha {fecha}: {texto_estado}", ln=1)
+    
+    pdf.ln(5)
+
+    # 3. SECCIÓN PARTIDOS (Lista de Tuplas)
+    pdf.set_font("Arial", style="B", size=14)
+    pdf.cell(200, 10, txt="Historial de Partidos", ln=1)
+    pdf.set_font("Arial", size=12)
+
+    if not datos['partidos']:
+        pdf.cell(200, 10, txt="No ha dirigido partidos aún.", ln=1)
+    else:
+        # Recorremos la lista de partidos
+        # trabajo = (dia, mes , plata)
+        total_ganado = 0
+        for partido in datos['partidos']:
+            dia, mes, plata = partido
+            pdf.cell(200, 10, txt=f"- Dirigió el {dia}/{mes}. Ganancia: ${plata}", ln=1)
+            total_ganado += float(plata) # Sumamos para el total
+        
+        pdf.set_font("Arial", style="B", size=12)
+        pdf.cell(200, 10, txt=f"Total Ganado: ${total_ganado}", ln=1)
+
+    pdf.ln(5)
+
+    # 4. SECCIÓN DESEMPEÑO (Lista de Diccionarios)
+    pdf.set_font("Arial", style="B", size=14)
+    pdf.cell(200, 10, txt="Evaluaciones Técnicas (Categoría A)", ln=1)
+    pdf.set_font("Arial", size=10) # Letra más chica para que entre todo
+
+    if not datos['evaluaciones']:
+        pdf.cell(200, 10, txt="Sin evaluaciones cargadas.", ln=1)
+    else:
+        for evaluacion in datos['evaluaciones']:
+            # evaluacion es un diccionario pequeño
+            fecha = f"{evaluacion['dia']}/{evaluacion['mes']}"
+            resumen = f"Fecha: {fecha} | Ubicación: {'OK' if evaluacion['ubicacion'] else 'MAL'} | Señas: {'OK' if evaluacion['señas'] else 'MAL'}"
+            pdf.cell(0, 10, txt=resumen, ln=1)
+
+    # --- GUARDAR ARCHIVO ---
+    nombre_archivo = f"Reporte_{datos['apellido']}_{dni}.pdf"
+    pdf.output(nombre_archivo)
+    print(f"\n PDF Generado con éxito: {nombre_archivo}")
 colegio = {}
 def registro():
     dni = input("Ingrese el DNI del arbitro que quiere registrar: ")
@@ -15,7 +96,15 @@ def registro():
     colegio[dni] = arbitro
     print(f"{nombre}, {apellido}. Registrado con éxito")
 
+def pagos(): 
 
+    dni = input("Ingrese el dni del arbitro que quiere pagar")
+    dia = input("Ingrese el dia: ")
+    mes = input("Ingrese el mes: ")
+
+    if dni in colegio:
+        pago = pedir_bool(f"¿El arbitro {colegio[dni]['nombre']}, pagó el 10% de la siguiente fecha ({dia, mes})?")
+        colegio[dni]["pagos"][f"{dia}/{mes}"] = pago
 
 def designar():
     dni = input("Ingrese el DNI de el arbitro que quiere designar: ")
@@ -64,7 +153,9 @@ def pedir_bool(pregunta):
 def datos():
 
     dni = input("Ingrese el dni de quien quiere saber los datos: ")
-    print(colegio[dni])
+    if dni in colegio:
+
+        print(colegio[dni])
 
 def menu():
     while True:
@@ -74,6 +165,8 @@ def menu():
         print("4- Mostrar datos")
         print("3- Salir")
         print("5- Agregar desempeño en cancha")
+        print("6- Registrar pago 10%")
+        print("7- Generar reporte en PDF")
 
         opc = int(input("Ingrese la opcion que quiera realizar: "))
 
@@ -85,6 +178,10 @@ def menu():
             datos()
         elif opc == 5: 
             desempeño()
+        elif opc == 6:
+            pagos()
+        elif opc == 7:
+            generar_reporte()
         else:
             print("Saliendo...")
             break
