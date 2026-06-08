@@ -76,15 +76,26 @@ def guardar_evaluacion_db(datos, puntaje_final):
         cursor.execute("INSERT INTO Evaluaciones (fecha, arbitro, companero, tercer_juez, ct, categoria, equipo_local, equipo_visitante, puntaje_final) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
                        (datos['fecha'], datos['arbitro'], datos['companero'], datos['final_3er'], datos['final_ct'], datos['categoria'], datos['equipo_local'], datos['equipo_visitante'], puntaje_final))
         id_eval = cursor.lastrowid
+        
         cursor.execute("INSERT INTO Contexto_Avanzado VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s)",
                        (id_eval, datos['d_descanso'], datos['d_km'], datos['importancia'], datos['conflictividad'], datos['temp'], datos['publico'], datos['dif_rank']))
         
-        cursor.execute("INSERT INTO Mecanica_Micro VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['mecanica']))
-        cursor.execute("INSERT INTO Analisis_Faltas VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['faltas']))
-        cursor.execute("INSERT INTO Analisis_Violaciones VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['violaciones']))
-        cursor.execute("INSERT INTO Psicologia_Manejo VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['psicologia']))
-        cursor.execute("INSERT INTO Biometria_Fisico VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s)",
+        # Correccion: 14 variables = 14 %s
+        cursor.execute("INSERT INTO Mecanica_Micro VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['mecanica']))
+        
+        # Correccion: 11 variables = 11 %s
+        cursor.execute("INSERT INTO Analisis_Faltas VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['faltas']))
+        
+        # Correccion: 9 variables = 9 %s
+        cursor.execute("INSERT INTO Analisis_Violaciones VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['violaciones']))
+        
+        # Correccion: 9 variables = 9 %s
+        cursor.execute("INSERT INTO Psicologia_Manejo VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['psicologia']))
+        
+        # Correccion: 9 variables = 9 %s
+        cursor.execute("INSERT INTO Biometria_Fisico VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                        (id_eval, datos['distancia'], datos['sprints'], datos['fc_prom'], datos['fc_pico'], datos['velocidad'], datos['fatiga'], datos['lucidez'], datos['lesion']))
+        
         conn.commit()
         return id_eval
     except Error as e:
