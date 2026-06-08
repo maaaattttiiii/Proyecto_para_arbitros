@@ -19,8 +19,10 @@ def validar_reglas_negocio(datos):
         
     if datos['categoria'] in ["Mosquitos", "Premini", "Mini"] and (datos['hubo_3er'] or datos['hubo_ct']):
         errores.append(f"En categoria {datos['categoria']} no se designan Terceros Jueces ni CT.")
-    if datos['categoria'] in ["Superliga", "SuperligaF", "Liga Nacional", "Liga Argentina", "Liga Femenina"] and not datos['hubo_ct']:
-        errores.append(f"Los partidos de {datos['categoria']} requieren obligatoriamente un CT.")
+        
+
+    if datos['categoria'] in ["Superliga", "SuperligaF", "Liga Nacional", "Liga Argentina", "Liga Femenina"] and not datos['hubo_3er']:
+        errores.append(f"Los partidos de {datos['categoria']} se juegan con 3 arbitros. Falta tildar y designar al Tercer Juez.")
         
     if datos['hubo_fisico']:
         if datos['fc_pico'] < datos['fc_prom']:
