@@ -4,15 +4,21 @@ from mysql.connector import Error
 import streamlit as st
 
 def conectar_db():
+    """Establece la conexion con el servidor MySQL en la nube de Aiven."""
     try:
         return mysql.connector.connect(
-            host='localhost', user='root', password='', database='legado_arbitral'
+            host=st.secrets["mysql"]["host"],
+            port=int(st.secrets["mysql"]["port"]),
+            user=st.secrets["mysql"]["user"],
+            password=st.secrets["mysql"]["password"],
+            database=st.secrets["mysql"]["database"]
         )
     except Error as e:
-        st.error(f"Error de conexion: {e}")
+        st.error(f"Error de conexion con la nube: {e}")
         return None
 
 def inicializar_sistema():
+    """Crea la estructura de tablas en la base de datos de la nube."""
     conn = conectar_db()
     if not conn: return
     try:
@@ -57,7 +63,7 @@ def inicializar_sistema():
         for query in tablas_sql: cursor.execute(query)
         conn.commit()
     except Error as e:
-        st.error(f"Error creando tablas: {e}")
+        st.error(f"Error creando tablas en la nube: {e}")
     finally:
         cursor.close()
         conn.close()
@@ -81,7 +87,7 @@ def guardar_evaluacion_db(datos, puntaje_final):
         conn.commit()
         return id_eval
     except Error as e:
-        st.error(f"Error SQL: {e}")
+        st.error(f"Error al guardar datos en la nube: {e}")
         return False
     finally:
         cursor.close()
