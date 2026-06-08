@@ -10,15 +10,22 @@ def validar_reglas_negocio(datos):
     if datos['hubo_3er'] and (datos['tercer_juez'] == "-- Seleccionar --" or datos['tercer_juez'] in [datos['arbitro'], datos['companero']]):
         errores.append("Error en Tercer Juez (no seleccionado o duplicado).")
     
+    if not datos['equipo_local'].strip() or not datos['equipo_visitante'].strip():
+        errores.append("Debes ingresar el Equipo Local y el Equipo Visitante.")
+    if not datos['cancha'].strip():
+        errores.append("Debes ingresar la cancha o estadio donde se jugo.")
+        
     if datos['categoria'] in ["Mosquitos", "Premini"] and (datos['hubo_3er'] or datos['hubo_ct']):
         errores.append(f"En categoria {datos['categoria']} no se designan Terceros Jueces ni CT.")
-    if datos['categoria'] == "Superliga" and not datos['tercer_juez'] != "-- Seleccionar --":
-        errores.append("Los partidos de Superliga requieren obligatoriamente un Tercer Juez.")
+    if datos['categoria'] == "Superliga" and not datos['hubo_ct']:
+        errores.append("Los partidos de Superliga requieren obligatoriamente un CT.")
         
-    if datos['fc_pico'] < datos['fc_prom']:
-        errores.append("Error logico: La FC Pico no puede ser menor a la FC Promedio.")
-    if datos['distancia'] > 15.0:
-        errores.append("Error logico: La distancia recorrida es inusualmente alta (mayor a 15 KM).")
+    # Solo validamos la logica cardiaca si se activo la carga de datos fisicos
+    if datos['hubo_fisico']:
+        if datos['fc_pico'] < datos['fc_prom']:
+            errores.append("Error logico: La FC Pico no puede ser menor a la FC Promedio.")
+        if datos['distancia'] > 15.0:
+            errores.append("Error logico: La distancia recorrida es inusualmente alta (mayor a 15 KM).")
         
     return errores
 

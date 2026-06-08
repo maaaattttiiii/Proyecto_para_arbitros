@@ -4,7 +4,6 @@ from mysql.connector import Error
 import streamlit as st
 
 def conectar_db():
-    """Establece la conexion con el servidor MySQL en la nube de Aiven."""
     try:
         return mysql.connector.connect(
             host=st.secrets["mysql"]["host"],
@@ -18,7 +17,6 @@ def conectar_db():
         return None
 
 def inicializar_sistema():
-    """Crea la estructura de tablas en la base de datos de la nube."""
     conn = conectar_db()
     if not conn: return
     try:
@@ -27,7 +25,8 @@ def inicializar_sistema():
             """CREATE TABLE IF NOT EXISTS Evaluaciones (
                 id_evaluacion INT AUTO_INCREMENT PRIMARY KEY, fecha DATE, arbitro VARCHAR(100), 
                 companero VARCHAR(100), tercer_juez VARCHAR(100) NULL, ct VARCHAR(100) NULL,
-                categoria VARCHAR(50), puntaje_final DECIMAL(4,2))""",
+                categoria VARCHAR(50), equipo_local VARCHAR(100), equipo_visitante VARCHAR(100),
+                cancha VARCHAR(100), puntaje_final DECIMAL(4,2))""",
             """CREATE TABLE IF NOT EXISTS Contexto_Avanzado (
                 id_contexto INT AUTO_INCREMENT PRIMARY KEY, id_evaluacion INT, dias_descanso INT, 
                 distancia_km INT, importancia INT, conflictividad INT, temperatura INT, 
@@ -37,11 +36,12 @@ def inicializar_sistema():
                 id_mecanica INT AUTO_INCREMENT PRIMARY KEY, id_evaluacion INT, lider_penetracion INT, 
                 lider_rebote INT, seguidor_3pt INT, centro_sin_balon INT, tiempo_rotacion INT, 
                 vision_bloqueada INT, saques INT, bocina INT, com_visual INT,
+                silbato_marginal INT, silbato_cruzado INT, silbato_rapido INT, silbato_eco INT,
                 FOREIGN KEY (id_evaluacion) REFERENCES Evaluaciones(id_evaluacion) ON DELETE CASCADE)""",
             """CREATE TABLE IF NOT EXISTS Analisis_Faltas (
                 id_faltas INT AUTO_INCREMENT PRIMARY KEY, id_evaluacion INT, bloqueo_carga INT, 
                 manos_perimetro INT, pantallas_ilegales INT, cilindro INT, id_aterrizaje INT, 
-                flopping INT, antideportivas_c1c2 INT, antideportivas_c3c4 INT, consistencia_q1q4 INT, 
+                foul_saque INT, antideportivas_c1c2 INT, antideportivas_c3c4 INT, consistencia_q1q4 INT, 
                 compensacion INT,
                 FOREIGN KEY (id_evaluacion) REFERENCES Evaluaciones(id_evaluacion) ON DELETE CASCADE)""",
             """CREATE TABLE IF NOT EXISTS Analisis_Violaciones (
@@ -73,16 +73,17 @@ def guardar_evaluacion_db(datos, puntaje_final):
     if not conn: return False
     try:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO Evaluaciones (fecha, arbitro, companero, tercer_juez, ct, categoria, puntaje_final) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                       (datos['fecha'], datos['arbitro'], datos['companero'], datos['final_3er'], datos['final_ct'], datos['categoria'], puntaje_final))
+        cursor.execute("INSERT INTO Evaluaciones (fecha, arbitro, companero, tercer_juez, ct, categoria, equipo_local, equipo_visitante, cancha, puntaje_final) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                       (datos['fecha'], datos['arbitro'], datos['companero'], datos['final_3er'], datos['final_ct'], datos['categoria'], datos['equipo_local'], datos['equipo_visitante'], datos['cancha'], puntaje_final))
         id_eval = cursor.lastrowid
         cursor.execute("INSERT INTO Contexto_Avanzado VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s)",
                        (id_eval, datos['d_descanso'], datos['d_km'], datos['importancia'], datos['conflictividad'], datos['temp'], datos['publico'], datos['dif_rank']))
-        cursor.execute("INSERT INTO Mecanica_Micro VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['mecanica']))
-        cursor.execute("INSERT INTO Analisis_Faltas VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['faltas']))
-        cursor.execute("INSERT INTO Analisis_Violaciones VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['violaciones']))
-        cursor.execute("INSERT INTO Psicologia_Manejo VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['psicologia']))
-        cursor.execute("INSERT INTO Biometria_Fisico VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+        
+        cursor.execute("INSERT INTO Mecanica_Micro VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['mecanica']))
+        cursor.execute("INSERT INTO Analisis_Faltas VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['faltas']))
+        cursor.execute("INSERT INTO Analisis_Violaciones VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['violaciones']))
+        cursor.execute("INSERT INTO Psicologia_Manejo VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s)", (id_eval, *datos['psicologia']))
+        cursor.execute("INSERT INTO Biometria_Fisico VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s)",
                        (id_eval, datos['distancia'], datos['sprints'], datos['fc_prom'], datos['fc_pico'], datos['velocidad'], datos['fatiga'], datos['lucidez'], datos['lesion']))
         conn.commit()
         return id_eval
