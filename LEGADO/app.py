@@ -2,8 +2,7 @@
 import streamlit as st
 import datetime
 import pandas as pd
-
-from config import LISTA_ARBITROS, LISTA_CT
+from config import LISTA_ARBITROS, LISTA_CT, LISTA_CATEGORIAS, LISTA_EQUIPOS_MASCULINOS, LISTA_EQUIPOS_FEMENINOS
 from logic import validar_reglas_negocio, calcular_puntaje_final
 from database import inicializar_sistema, conectar_db, guardar_evaluacion_db
 
@@ -46,11 +45,20 @@ def main():
     with t_gen:
         st.header("Datos Basicos")
         fecha = st.date_input("Fecha", max_value=datetime.date.today(), min_value=datetime.date(2024, 1, 1))
-        categoria = st.selectbox("Categoria", ["Mosquitos", "Premini", "U13", "U15", "U17", "U19", "Superliga"])
         
+        # Selectbox con las categorías de config.py
+        categoria = st.selectbox("Categoria", LISTA_CATEGORIAS)
+        
+        # Logica para detectar si la categoria es femenina y mostrar los equipos correspondientes
+        categorias_femeninas = ["U13F", "U15F", "U17F", "U19F", "SuperligaF", "Liga Femenina"]
+        if categoria in categorias_femeninas:
+            lista_equipos_dinamica = LISTA_EQUIPOS_FEMENINOS
+        else:
+            lista_equipos_dinamica = LISTA_EQUIPOS_MASCULINOS
+            
         c_eq1, c_eq2 = st.columns(2)
-        with c_eq1: equipo_local = st.text_input("Equipo Local")
-        with c_eq2: equipo_visitante = st.text_input("Equipo Visitante")
+        with c_eq1: equipo_local = st.selectbox("Equipo Local", lista_equipos_dinamica)
+        with c_eq2: equipo_visitante = st.selectbox("Equipo Visitante", lista_equipos_dinamica)
         
         cancha = st.text_input("Cancha / Estadio")
         
