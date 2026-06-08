@@ -12,8 +12,8 @@ def validar_reglas_negocio(datos):
     
     if datos['categoria'] in ["Mosquitos", "Premini"] and (datos['hubo_3er'] or datos['hubo_ct']):
         errores.append(f"En categoria {datos['categoria']} no se designan Terceros Jueces ni CT.")
-    if datos['categoria'] == "Superliga" and not datos['hubo_ct']:
-        errores.append("Los partidos de Superliga requieren obligatoriamente un CT.")
+    if datos['categoria'] == "Superliga" and not datos['tercer_juez'] != "-- Seleccionar --":
+        errores.append("Los partidos de Superliga requieren obligatoriamente un Tercer Juez.")
         
     if datos['fc_pico'] < datos['fc_prom']:
         errores.append("Error logico: La FC Pico no puede ser menor a la FC Promedio.")

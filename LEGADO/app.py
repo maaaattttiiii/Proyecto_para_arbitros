@@ -34,19 +34,19 @@ def renderizar_dashboard():
         conn.close()
 
 def main():
-    st.set_page_config(page_title="Legado Arbitral - Pro", layout="wide")
+    st.set_page_config(page_title="Legado Arbitral ", layout="wide")
     inicializar_sistema()
     
-    st.title("🏆 Panel de Control: Legado Arbitral")
+    st.title("Panel de Control: Legado Arbitral")
     t_dash, t_gen, t_ctx, t_mec, t_fal, t_vio, t_psi, t_fis, t_save = st.tabs([
-        "Dashboard", "General", "Contexto", "Mecanica", "Faltas", "Violaciones", "Psicologia", "Fisico", "Guardar"
+        "Rendimientos", "General", "Contexto", "Mecanica", "Faltas", "Violaciones", "Psicologia", "Fisico", "Guardar"
     ])
 
     with t_dash: renderizar_dashboard()
 
     with t_gen:
         fecha = st.date_input("Fecha", max_value=datetime.date.today(), min_value=datetime.date(2024, 1, 1))
-        categoria = st.selectbox("Categoria", ["Mosquitos", "Premini", "U13", "U15", "U17", "U19", "Superliga"])
+        categoria = st.selectbox("Categoria", ["Mosquitos", "Premini","Mini", "U13", "U15", "U17", "U19", "Superliga", "U13F", "U15F", "U17F", "U19F", "SuperligaF" , "Mayores"  ])
         c1, c2 = st.columns(2)
         with c1: arbitro = st.selectbox("Arbitro Principal", LISTA_ARBITROS)
         with c2: companero = st.selectbox("Segundo Juez", LISTA_ARBITROS)
