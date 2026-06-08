@@ -26,7 +26,7 @@ def inicializar_sistema():
                 id_evaluacion INT AUTO_INCREMENT PRIMARY KEY, fecha DATE, arbitro VARCHAR(100), 
                 companero VARCHAR(100), tercer_juez VARCHAR(100) NULL, ct VARCHAR(100) NULL,
                 categoria VARCHAR(50), equipo_local VARCHAR(100), equipo_visitante VARCHAR(100),
-                cancha VARCHAR(100), puntaje_final DECIMAL(4,2))""",
+                puntaje_final DECIMAL(4,2))""",
             """CREATE TABLE IF NOT EXISTS Contexto_Avanzado (
                 id_contexto INT AUTO_INCREMENT PRIMARY KEY, id_evaluacion INT, dias_descanso INT, 
                 distancia_km INT, importancia INT, conflictividad INT, temperatura INT, 
@@ -73,8 +73,8 @@ def guardar_evaluacion_db(datos, puntaje_final):
     if not conn: return False
     try:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO Evaluaciones (fecha, arbitro, companero, tercer_juez, ct, categoria, equipo_local, equipo_visitante, cancha, puntaje_final) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                       (datos['fecha'], datos['arbitro'], datos['companero'], datos['final_3er'], datos['final_ct'], datos['categoria'], datos['equipo_local'], datos['equipo_visitante'], datos['cancha'], puntaje_final))
+        cursor.execute("INSERT INTO Evaluaciones (fecha, arbitro, companero, tercer_juez, ct, categoria, equipo_local, equipo_visitante, puntaje_final) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                       (datos['fecha'], datos['arbitro'], datos['companero'], datos['final_3er'], datos['final_ct'], datos['categoria'], datos['equipo_local'], datos['equipo_visitante'], puntaje_final))
         id_eval = cursor.lastrowid
         cursor.execute("INSERT INTO Contexto_Avanzado VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s)",
                        (id_eval, datos['d_descanso'], datos['d_km'], datos['importancia'], datos['conflictividad'], datos['temp'], datos['publico'], datos['dif_rank']))
