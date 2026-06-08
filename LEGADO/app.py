@@ -34,9 +34,44 @@ def renderizar_dashboard():
 
 def main():
     st.set_page_config(page_title="Legado Arbitral", layout="wide")
+    
+    # --- SISTEMA DE LOGIN ---
+    if "autenticado" not in st.session_state:
+        st.session_state.autenticado = False
+
+    if not st.session_state.autenticado:
+        st.title("🔒 Acceso Restringido")
+        st.write("Por favor, ingresa tus credenciales para continuar.")
+        
+        with st.form("login_form"):
+            usuario = st.text_input("Usuario")
+            clave = st.text_input("Contrasena", type="password")
+            submit = st.form_submit_button("Ingresar")
+            
+            if submit:
+                # Compara con los datos guardados en el archivo secrets
+                if usuario == st.secrets["login"]["usuario"] and clave == st.secrets["login"]["clave"]:
+                    st.session_state.autenticado = True
+                    st.rerun() # Refresca la pagina para cargar el sistema
+                else:
+                    st.error("Usuario o contrasena incorrectos. Intenta de nuevo.")
+        
+        # El return hace que Python se frene aca y no lea el resto del codigo si no esta logueado
+        return
+    # --- FIN SISTEMA DE LOGIN ---
+
+    # Si pasa el login, carga el sistema normal
     inicializar_sistema()
     
-    st.title("Panel de Control: Legado Arbitral")
+    col_titulo, col_salir = st.columns([8, 1])
+    with col_titulo:
+        st.title("Panel de Control: Legado Arbitral")
+    with col_salir:
+        st.write("##")
+        if st.button("Salir 🚪"):
+            st.session_state.autenticado = False
+            st.rerun()
+
     t_dash, t_gen, t_ctx, t_mec, t_fal, t_vio, t_psi, t_fis, t_save = st.tabs([
         "Dashboard", "General", "Contexto", "Mecanica", "Faltas", "Violaciones", "Psicologia", "Fisico", "Guardar"
     ])
