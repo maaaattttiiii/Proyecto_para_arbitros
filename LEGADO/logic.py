@@ -3,7 +3,6 @@
 def validar_reglas_negocio(datos):
     errores = []
     
-    # Validaciones de Árbitros
     if datos['arbitro'] == "-- Seleccionar --" or datos['companero'] == "-- Seleccionar --":
         errores.append("Debes seleccionar Arbitro Principal y Compañero.")
     if datos['arbitro'] == datos['companero'] and datos['arbitro'] != "-- Seleccionar --":
@@ -11,7 +10,6 @@ def validar_reglas_negocio(datos):
     if datos['hubo_3er'] and (datos['tercer_juez'] == "-- Seleccionar --" or datos['tercer_juez'] in [datos['arbitro'], datos['companero']]):
         errores.append("Error en Tercer Juez (no seleccionado o duplicado).")
     
-    # Validaciones de Equipos y Categoría
     if datos['categoria'] == "-- Seleccionar --":
         errores.append("Debes seleccionar la Categoría del partido.")
     if datos['equipo_local'] == "-- Seleccionar --" or datos['equipo_visitante'] == "-- Seleccionar --":
@@ -19,16 +17,11 @@ def validar_reglas_negocio(datos):
     elif datos['equipo_local'] == datos['equipo_visitante'] and datos['equipo_local'] != "-- Seleccionar --":
         errores.append("Error logico: El Equipo Local y el Visitante no pueden ser el mismo.")
         
-    if not datos['cancha'].strip():
-        errores.append("Debes ingresar la cancha o estadio donde se jugo.")
-        
-    # Validaciones cruzadas de Torneo
     if datos['categoria'] in ["Mosquitos", "Premini", "Mini"] and (datos['hubo_3er'] or datos['hubo_ct']):
         errores.append(f"En categoria {datos['categoria']} no se designan Terceros Jueces ni CT.")
     if datos['categoria'] in ["Superliga", "SuperligaF", "Liga Nacional", "Liga Argentina", "Liga Femenina"] and not datos['hubo_ct']:
         errores.append(f"Los partidos de {datos['categoria']} requieren obligatoriamente un CT.")
         
-    # Validaciones Físicas
     if datos['hubo_fisico']:
         if datos['fc_pico'] < datos['fc_prom']:
             errores.append("Error logico: La FC Pico no puede ser menor a la FC Promedio.")

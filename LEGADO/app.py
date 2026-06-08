@@ -2,6 +2,7 @@
 import streamlit as st
 import datetime
 import pandas as pd
+
 from config import LISTA_ARBITROS, LISTA_CT, LISTA_CATEGORIAS, LISTA_EQUIPOS_MASCULINOS, LISTA_EQUIPOS_FEMENINOS
 from logic import validar_reglas_negocio, calcular_puntaje_final
 from database import inicializar_sistema, conectar_db, guardar_evaluacion_db
@@ -46,10 +47,8 @@ def main():
         st.header("Datos Basicos")
         fecha = st.date_input("Fecha", max_value=datetime.date.today(), min_value=datetime.date(2024, 1, 1))
         
-        # Selectbox con las categorías de config.py
         categoria = st.selectbox("Categoria", LISTA_CATEGORIAS)
         
-        # Logica para detectar si la categoria es femenina y mostrar los equipos correspondientes
         categorias_femeninas = ["U13F", "U15F", "U17F", "U19F", "SuperligaF", "Liga Femenina"]
         if categoria in categorias_femeninas:
             lista_equipos_dinamica = LISTA_EQUIPOS_FEMENINOS
@@ -59,8 +58,6 @@ def main():
         c_eq1, c_eq2 = st.columns(2)
         with c_eq1: equipo_local = st.selectbox("Equipo Local", lista_equipos_dinamica)
         with c_eq2: equipo_visitante = st.selectbox("Equipo Visitante", lista_equipos_dinamica)
-        
-        cancha = st.text_input("Cancha / Estadio")
         
         c1, c2 = st.columns(2)
         with c1: arbitro = st.selectbox("Arbitro Principal", LISTA_ARBITROS)
@@ -148,7 +145,7 @@ def main():
         if st.button("Guardar Evaluacion", type="primary"):
             datos = {
                 'fecha': fecha, 'categoria': categoria, 'arbitro': arbitro, 'companero': companero,
-                'equipo_local': equipo_local, 'equipo_visitante': equipo_visitante, 'cancha': cancha,
+                'equipo_local': equipo_local, 'equipo_visitante': equipo_visitante,
                 'hubo_3er': hubo_3er, 'tercer_juez': tercer_juez, 'hubo_ct': hubo_ct, 'ct': ct,
                 'final_3er': tercer_juez if (hubo_3er and tercer_juez != "-- Seleccionar --") else None,
                 'final_ct': ct if (hubo_ct and ct != "-- Seleccionar --") else None,
