@@ -33,12 +33,12 @@ arbitros_cabm_2026 = {
     ]
 }
 
-todos_los_arbitros = []
+arbitros_completos = []
 for categoria, arbitros in arbitros_cabm_2026.items():
-    todos_los_arbitros.extend(arbitros)
+    arbitros_completos.extend(arbitros)
 
 
-LISTA_ARBITROS = ["-- Seleccionar --"] + sorted(todos_los_arbitros)
+LISTA_ARBITROS = ["-- Seleccionar --"] + sorted(arbitros_completos)
 
 
 LISTA_CT = [
