@@ -49,18 +49,14 @@ def main():
             submit = st.form_submit_button("Ingresar")
             
             if submit:
-                # Compara con los datos guardados en el archivo secrets
                 if usuario == st.secrets["login"]["usuario"] and clave == st.secrets["login"]["clave"]:
                     st.session_state.autenticado = True
-                    st.rerun() # Refresca la pagina para cargar el sistema
+                    st.rerun() 
                 else:
                     st.error("Usuario o contrasena incorrectos. Intenta de nuevo.")
-        
-        # El return hace que Python se frene aca y no lea el resto del codigo si no esta logueado
         return
     # --- FIN SISTEMA DE LOGIN ---
 
-    # Si pasa el login, carga el sistema normal
     inicializar_sistema()
     
     col_titulo, col_salir = st.columns([8, 1])
@@ -84,15 +80,26 @@ def main():
         
         categoria = st.selectbox("Categoria", LISTA_CATEGORIAS)
         
+        # --- LOGICA DE BLOQUEO DE EQUIPOS ---
+        categoria_no_elegida = (categoria == "-- Seleccionar --")
         categorias_femeninas = ["U13F", "U15F", "U17F", "U19F", "SuperligaF", "Liga Femenina"]
-        if categoria in categorias_femeninas:
+        
+        if categoria_no_elegida:
+            # Si no eligio categoria, forzamos una lista vacia para no mostrar equipos de mas
+            lista_equipos_dinamica = ["-- Seleccionar --"]
+        elif categoria in categorias_femeninas:
             lista_equipos_dinamica = LISTA_EQUIPOS_FEMENINOS
         else:
             lista_equipos_dinamica = LISTA_EQUIPOS_MASCULINOS
             
         c_eq1, c_eq2 = st.columns(2)
-        with c_eq1: equipo_local = st.selectbox("Equipo Local", lista_equipos_dinamica)
-        with c_eq2: equipo_visitante = st.selectbox("Equipo Visitante", lista_equipos_dinamica)
+        
+        # Le agregamos la propiedad 'disabled' que apaga el selectbox si categoria_no_elegida es True
+        with c_eq1: 
+            equipo_local = st.selectbox("Equipo Local", lista_equipos_dinamica, disabled=categoria_no_elegida)
+        with c_eq2: 
+            equipo_visitante = st.selectbox("Equipo Visitante", lista_equipos_dinamica, disabled=categoria_no_elegida)
+        # ------------------------------------
         
         c1, c2 = st.columns(2)
         with c1: arbitro = st.selectbox("Arbitro Principal", LISTA_ARBITROS)

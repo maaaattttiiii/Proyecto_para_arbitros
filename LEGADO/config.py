@@ -1,9 +1,45 @@
 # config.py
 
-LISTA_ARBITROS = [
-    "-- Seleccionar --", "Matias Nicolas Vargas", "Lucas Pereyra", "Facundo Cordoba",
-    "Agustin Gimenez", "Gonzalo Fernandez", "Lautaro Silva", "Fabricio Rossi"
-]
+arbitros_cabm_2026 = {
+    "A": [
+        "ROSAS ARIEL", "LEYTON PABLO", "PRADO MICAELA", "MELLADO SEBASTIAN",
+        "OLIVER RODRIGO", "FLORES FRANCISCO", "CALDERON BELEN", "MONTBRUM JOAQUIN",
+        "TORRES JIMΜΕΝΑ", "OCHOA ALDO", "CIARAMITARO MILAGROS", "SCONFIENZA MICAELA"
+    ],
+    "A1": [
+        "FUNES GUILLERMO", "SANCHEZ FEDERICO", "FUNES RAMON", "NARVAEZ FERNANDO",
+        "QUINI MARIELA", "CANER CRISTINA", "PEREZ LUIS", "GILI RODIRGO",
+        "MUÑOZ GONZALO", "FERNANDEZ MARIO", "VONKUNOSKY LUCIA", "GONZALEZ NADIA"
+    ],
+    "B": [
+        "GARCIA SEBATIAN", "NAMAN VICTORIA", "VENTURA IGNACIO", "MOYANO MELINA",
+        "ARCE GABRIEL", "PICH VALENΝΤΙΝΑ", "BARRERA LAUREANO", "OCHOA AGOSTINA",
+        "SILVEYRA ROMINA", "DEMARCO LUCAS", "CASTILLO MAURICIO", "CHAVEZ CRISTIAN",
+        "STAND BY PELLERITTI JOSE"
+    ],
+    "PROMOCIONALES": [
+        "AGUILAR NICOLAS", "VERGARA LAURA", "VARGAS MATIAS", "CANALE LUCIA",
+        "MAUGIERI RENZO", "MORENO LUCAS", "GONZALEZ THOMAS", "FLORES JOAQUIN",
+        "GONGORA RODRIGO", "DIAZ RAMIRO", "MORENA LARA", "ABALLAY FELICITAS"
+    ],
+    "FORMATIVAS": [
+        "GONZALES AGUSTIN", "GIANGIULO LIHUE", "ENCINA FABRICIO", "BAIGORRIA MILAGROS",
+        "CALDERON MELISA", "CATALDO MILAGROS", "CACERES LUCIO", "VILLALBA LAUTARO",
+        "BENITO LUCIANO", "JARA FACUNDO", "ZUCCARINI ALESSANDRO", "MAUGERI AILEN",
+        "MARTIN JOAQUIN"
+    ],
+    "MAXI-MASTER": [
+        "FIGUEOA JUAN CARLOS", "LUIS SQUEF", "GARCIA VILMA"
+    ]
+}
+
+todos_los_arbitros = []
+for categoria, arbitros in arbitros_cabm_2026.items():
+    todos_los_arbitros.extend(arbitros)
+
+
+LISTA_ARBITROS = ["-- Seleccionar --"] + sorted(todos_los_arbitros)
+
 
 LISTA_CT = [
     "-- Seleccionar --", "Rodrigo Gilli", "Mariela Quini"
