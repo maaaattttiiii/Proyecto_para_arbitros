@@ -3,7 +3,9 @@ import streamlit as st
 import pandas as pd
 
 from logic import validar_reglas_negocio, calcular_puntaje_final
-from database import conectar_db, obtener_arbitros, obtener_partidos_pendientes, guardar_evaluacion_db
+from database import (inicializar_sistema, conectar_db, obtener_arbitros, 
+                      obtener_partidos_pendientes, crear_partido_db, 
+                      asignar_arbitro_partido, calcular_arancel_exacto, guardar_evaluacion_db)
 
 def campo_evaluacion(label, key):
     col_slider, col_check = st.columns([5, 1])
@@ -22,7 +24,6 @@ def renderizar_dashboard():
     
     if id_arb is not None:
         conn = conectar_db()
-        # Traemos la nota del HUB y la fecha uniéndolo con la tabla Partidos
         query = f"""
             SELECT P.fecha, R.puntaje_final 
             FROM Rendimientos_Hub R 
@@ -65,6 +66,8 @@ def main():
         return
     # --- FIN SISTEMA DE LOGIN ---
     
+    inicializar_sistema()
+    
     col_titulo, col_salir = st.columns([8, 1])
     with col_titulo:
         st.title("Panel de Control: Legado Arbitral")
@@ -74,8 +77,8 @@ def main():
             st.session_state.autenticado = False
             st.rerun()
 
-    t_dash, t_gen, t_ctx, t_mec, t_fal, t_vio, t_psi, t_fis, t_save = st.tabs([
-        "Dashboard", "General", "Contexto", "Mecánica", "Faltas", "Violaciones", "Psicología", "Físico", "Guardar"
+    t_dash, t_gen, t_ctx, t_mec, t_fal, t_vio, t_psi, t_fis, t_save, t_tesoreria = st.tabs([
+        "Dashboard", "General", "Contexto", "Mecánica", "Faltas", "Violaciones", "Psicología", "Físico", "Guardar", "💰 Tesorería"
     ])
 
     with t_dash: 
@@ -83,7 +86,7 @@ def main():
 
     with t_gen:
         st.header("Selección de Evento")
-        st.info("Para evaluar, seleccioná un partido programado y el árbitro a observar.")
+        st.info("Para evaluar, seleccioná un partido de la lista y el árbitro que querés observar.")
         
         dicc_partidos = obtener_partidos_pendientes()
         dicc_arbitros = obtener_arbitros()
@@ -91,7 +94,6 @@ def main():
         partido_seleccionado = st.selectbox("Seleccionar Partido", options=list(dicc_partidos.keys()))
         arbitro_seleccionado = st.selectbox("Árbitro a Evaluar", options=list(dicc_arbitros.keys()))
         
-        # Guardamos los IDs reales en variables de sesión para usarlos al guardar
         id_partido_actual = dicc_partidos[partido_seleccionado]
         id_arbitro_actual = dicc_arbitros[arbitro_seleccionado]
 
@@ -185,6 +187,65 @@ def main():
                     puntaje = calcular_puntaje_final([mecanica, faltas, violaciones, psicologia])
                     if guardar_evaluacion_db(id_arbitro_actual, id_partido_actual, datos, puntaje):
                         st.success(f"Registro exitoso. Puntaje calculado: {puntaje:.2f}/10")
+
+    # --- PESTAÑA DE TESORERÍA ---
+    with t_tesoreria:
+        st.header("💰 Panel de Registro Expreso de Tesorería")
+        st.write("Carga los partidos de la semana acá. Las liquidaciones se calculan cruzando el nivel del árbitro con la tabla oficial.")
+        
+        c_m1, c_m2 = st.columns(2)
+        with c_m1:
+            loc_t = st.text_input("Equipo Local", placeholder="Ej: Anzorena", key="t_loc")
+            vis_t = st.text_input("Equipo Visitante", placeholder="Ej: UD San José", key="t_vis")
+            fec_t = st.date_input("Fecha Partido", key="t_fec")
+        with c_m2:
+            hor_t = st.text_input("Hora (HH:MM)", "21:30", key="t_hor")
+            cat_t = st.selectbox("Categoría del Encuentro", [
+                "SUPER LIGA", "ASCENSO", "PROMOCION", "SUPER LIGA FEM", 
+                "MASTER", "U23/PROMOCIONAL", "U19", "JUVENILES", "CADETES", 
+                "INFANTILES", "U11_x_2", "U11", "U9"
+            ], key="t_cat")
+        
+        st.markdown("---")
+        st.subheader("Trío Arbitral Directo")
+        dicc_arb_t = obtener_arbitros()
+        
+        col_t1, col_t2, col_t3 = st.columns(3)
+        with col_t1:
+            juez_p = st.selectbox("Juez Principal", options=list(dicc_arb_t.keys()), key="expr_j1")
+        with col_t2:
+            juez_1 = st.selectbox("1° Juez", options=["-- Seleccionar --"] + list(dicc_arb_t.keys())[1:], key="expr_j2")
+        with col_t3:
+            juez_2 = st.selectbox("2° Juez (Tercero)", options=["-- Seleccionar --"] + list(dicc_arb_t.keys())[1:], key="expr_j3")
+            
+        if st.button("Registrar y Liquidar Todo ⚡"):
+            if loc_t and vis_t and dicc_arb_t[juez_p]:
+                id_partido_creado = crear_partido_db(loc_t, vis_t, fec_t, hor_t, cat_t)
+                if id_partido_creado:
+                    # Liquida Principal
+                    id_juez_p = dicc_arb_t[juez_p]
+                    p_p = calcular_arancel_exacto(cat_t, id_juez_p, "JUEZ_PRINCIPAL")
+                    asignar_arbitro_partido(id_partido_creado, id_juez_p, "JUEZ_PRINCIPAL", p_p, 0.0)
+                    st.success(f"✓ {juez_p} liquidado con ${p_p}")
+                    
+                    # Liquida Segundo
+                    if juez_1 != "-- Seleccionar --":
+                        id_juez_1 = dicc_arb_t[juez_1]
+                        p_1 = calcular_arancel_exacto(cat_t, id_juez_1, "JUEZ_1")
+                        asignar_arbitro_partido(id_partido_creado, id_juez_1, "JUEZ_1", p_1, 0.0)
+                        st.success(f"✓ {juez_1} liquidado con ${p_1}")
+                        
+                    # Liquida Tercero
+                    if juez_2 != "-- Seleccionar --":
+                        id_juez_2 = dicc_arb_t[juez_2]
+                        p_2 = calcular_arancel_exacto(cat_t, id_juez_2, "JUEZ_2")
+                        asignar_arbitro_partido(id_partido_creado, id_juez_2, "JUEZ_2", p_2, 0.0)
+                        st.success(f"✓ {juez_2} liquidado con ${p_2}")
+                    
+                    st.balloons()
+                    st.rerun()
+            else:
+                st.error("Completá los nombres de los equipos y por lo menos el Juez Principal.")
 
 if __name__ == "__main__":
     main()
