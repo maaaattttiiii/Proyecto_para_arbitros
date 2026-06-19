@@ -7,6 +7,26 @@ from database import (inicializar_sistema, conectar_db, obtener_arbitros,
                       obtener_partidos_pendientes, crear_partido_db, 
                       asignar_arbitro_partido, calcular_arancel_exacto, guardar_evaluacion_db)
 
+# --- LISTAS OFICIALES DE CLUBES DE MENDOZA ---
+EQUIPOS_MASCULINOS = [
+    "-- Seleccionar --", "A.D. Anzorena", "Andes Talleres S.C.", "Atenas Sport Club",
+    "Atlético Club San Martín", "Centro Deportivo Rivadavia", "Club Banco Mendoza (CPBM)",
+    "Club Deportivo Godoy Cruz Antonio Tomba", "Club Israelita Macabi", "Club Mendoza de Regatas",
+    "Club Obras Mendoza", "C.S.D. General San Martín (Pacífico)", "C.S.D. Huracán Las Heras",
+    "C.S.D. Junín (Municipalidad de Junín)", "Instituto San Pablo", "Leonardo Murialdo",
+    "Municipalidad de Capital", "Municipalidad de Luján de Cuyo", "Municipalidad de San Carlos",
+    "Municipalidad de Tunuyán", "Municipalidad de Tupungato", "Petroleros YPF", "Social Las Heras",
+    "Unión Deportiva San José", "Universidad Nacional de Cuyo (UNCuyo)", "Municipalidad de Maipú"
+]
+
+EQUIPOS_FEMENINOS = [
+    "-- Seleccionar --", "Andes Talleres S.C.", "Atenas Sport Club", "Centro Deportivo Rivadavia",
+    "Club Banco Mendoza (CPBM)", "Club Deportivo Godoy Cruz Antonio Tomba", "Club Mendoza de Regatas",
+    "C.S.D. General San Martín (Pacífico)", "Juventud Mendocina", "Municipalidad de Junín",
+    "Municipalidad de Luján de Cuyo", "Municipalidad de Maipú", "Obras Mendoza", "Petroleros YPF",
+    "Unión Deportiva San José", "Universidad Nacional de Cuyo (UNCuyo)"
+]
+
 def campo_evaluacion(label, key):
     col_slider, col_check = st.columns([5, 1])
     with col_check:
@@ -176,7 +196,7 @@ def main():
                     'd_descanso': d_descanso, 'd_km': d_km, 'importancia': importancia, 
                     'conflictividad': conflictividad, 'temp': temp, 'publico': publico, 'dif_rank': dif_rank,
                     'mecanica': mecanica, 'faltas': faltas, 'violaciones': violaciones, 'psicologia': psicologia,
-                    'hubo_fisico': hubo_fisico, 'distancia': distancia, 'sprints': sprints, 'fc_prom': fc_prom, 
+                    'hubo_fisico': hubo_fisico, 'distancia': distance, 'sprints': sprints, 'fc_prom': fc_prom, 
                     'fc_pico': fc_pico, 'velocidad': velocidad, 'fatiga': fatiga, 'lucidez': lucidez, 'lesion': lesion
                 }
 
@@ -186,25 +206,30 @@ def main():
                 else:
                     puntaje = calcular_puntaje_final([mecanica, faltas, violaciones, psicologia])
                     if guardar_evaluacion_db(id_arbitro_actual, id_partido_actual, datos, puntaje):
-                        st.success(f"Registro exitoso. Puntaje calculado: {puntaje:.2f}/10")
+                        st.success(f"Registro exitoso. Puntaje calculated: {puntaje:.2f}/10")
 
-    # --- PESTAÑA DE TESORERÍA ---
+    # --- PESTAÑA DE TESORERÍA BLINDADA ---
     with t_tesoreria:
         st.header("💰 Panel de Registro Expreso de Tesorería")
         st.write("Carga los partidos de la semana acá. Las liquidaciones se calculan cruzando el nivel del árbitro con la tabla oficial.")
         
+        # 1. Selector de categoría (Se pone primero para mapear los equipos correspondientes)
+        cat_t = st.selectbox("Categoría del Encuentro", [
+            "SUPER LIGA", "ASCENSO", "PROMOCION", "SUPER LIGA FEM", 
+            "MASTER", "U23/PROMOCIONAL", "U19", "JUVENILES", "CADETES", 
+            "INFANTILES", "U11_x_2", "U11", "U9"
+        ], key="t_cat")
+        
+        # Filtro de equipos dinámicos para evitar mezclar ramas masculinas y femeninas
+        lista_equipos_dinamica = EQUIPOS_FEMENINOS if cat_t == "SUPER LIGA FEM" else EQUIPOS_MASCULINOS
+        
         c_m1, c_m2 = st.columns(2)
         with c_m1:
-            loc_t = st.text_input("Equipo Local", placeholder="Ej: Anzorena", key="t_loc")
-            vis_t = st.text_input("Equipo Visitante", placeholder="Ej: UD San José", key="t_vis")
-            fec_t = st.date_input("Fecha Partido", key="t_fec")
+            loc_t = st.selectbox("Equipo Local", options=lista_equipos_dinamica, key="t_loc")
+            vis_t = st.selectbox("Equipo Visitante", options=lista_equipos_dinamica, key="t_vis")
         with c_m2:
+            fec_t = st.date_input("Fecha Partido", key="t_fec")
             hor_t = st.text_input("Hora (HH:MM)", "21:30", key="t_hor")
-            cat_t = st.selectbox("Categoría del Encuentro", [
-                "SUPER LIGA", "ASCENSO", "PROMOCION", "SUPER LIGA FEM", 
-                "MASTER", "U23/PROMOCIONAL", "U19", "JUVENILES", "CADETES", 
-                "INFANTILES", "U11_x_2", "U11", "U9"
-            ], key="t_cat")
         
         st.markdown("---")
         st.subheader("Trío Arbitral Directo")
@@ -216,36 +241,46 @@ def main():
         with col_t2:
             juez_1 = st.selectbox("1° Juez", options=["-- Seleccionar --"] + list(dicc_arb_t.keys())[1:], key="expr_j2")
         with col_t3:
-            juez_2 = st.selectbox("2° Juez (Tercero)", options=["-- Seleccionar --"] + list(dicc_arb_t.keys())[1:], key="expr_j3")
+            juez_2 = st.selectbox("2° Juez (Tercero / Opcional)", options=["-- Seleccionar --"] + list(dicc_arb_t.keys())[1:], key="expr_j3")
             
-        if st.button("Registrar y Liquidar Todo ⚡"):
-            if loc_t and vis_t and dicc_arb_t[juez_p]:
+        if st.button("Registrar y Liquidar Todo ⚡", type="primary"):
+            # --- REGLAS DE VALIDACIÓN DE INTERFAZ ---
+            if loc_t == "-- Seleccionar --" or vis_t == "-- Seleccionar --":
+                st.error("❌ Error: Debes seleccionar obligatoriamente un Equipo Local y un Equipo Visitante.")
+            elif loc_t == vis_t:
+                st.error("❌ Error lógico: El Equipo Local y el Visitante no pueden ser el mismo club.")
+            elif dicc_arb_t[juez_p] is None or juez_1 == "-- Seleccionar --":
+                st.error("❌ Error: Todo partido requiere como mínimo la designación del Juez Principal y del 1° Juez.")
+            elif juez_p == juez_1 or (juez_2 != "-- Seleccionar --" and (juez_p == juez_2 or juez_1 == juez_2)):
+                st.error("❌ Error de duplicación: Un mismo árbitro no puede ocupar dos roles en el mismo partido.")
+            elif cat_t == "SUPER LIGA" and juez_2 == "-- Seleccionar --":
+                # VALIDACIÓN CRÍTICA: Fuerza la carga del 3° Juez si es Superliga Masculina
+                st.error("❌ Validación de Torneo: Los partidos de SUPER LIGA se dirigen obligatoriamente con terna (falta designar el 2° Juez).")
+            else:
+                # Si pasa todos los filtros, inserta en MySQL
                 id_partido_creado = crear_partido_db(loc_t, vis_t, fec_t, hor_t, cat_t)
                 if id_partido_creado:
-                    # Liquida Principal
+                    # Liquida e inserta Principal
                     id_juez_p = dicc_arb_t[juez_p]
                     p_p = calcular_arancel_exacto(cat_t, id_juez_p, "JUEZ_PRINCIPAL")
                     asignar_arbitro_partido(id_partido_creado, id_juez_p, "JUEZ_PRINCIPAL", p_p, 0.0)
-                    st.success(f"✓ {juez_p} liquidado con ${p_p}")
+                    st.success(f"✓ {juez_p} liquidado con ${p_p:,.2f}")
                     
-                    # Liquida Segundo
-                    if juez_1 != "-- Seleccionar --":
-                        id_juez_1 = dicc_arb_t[juez_1]
-                        p_1 = calcular_arancel_exacto(cat_t, id_juez_1, "JUEZ_1")
-                        asignar_arbitro_partido(id_partido_creado, id_juez_1, "JUEZ_1", p_1, 0.0)
-                        st.success(f"✓ {juez_1} liquidado con ${p_1}")
-                        
-                    # Liquida Tercero
+                    # Liquida e inserta Segundo Juez
+                    id_juez_1 = dicc_arb_t[juez_1]
+                    p_1 = calcular_arancel_exacto(cat_t, id_juez_1, "JUEZ_1")
+                    asignar_arbitro_partido(id_partido_creado, id_juez_1, "JUEZ_1", p_1, 0.0)
+                    st.success(f"✓ {juez_1} liquidado con ${p_1:,.2f}")
+                    
+                    # Liquida e inserta Tercer Juez si fue seleccionado
                     if juez_2 != "-- Seleccionar --":
                         id_juez_2 = dicc_arb_t[juez_2]
                         p_2 = calcular_arancel_exacto(cat_t, id_juez_2, "JUEZ_2")
                         asignar_arbitro_partido(id_partido_creado, id_juez_2, "JUEZ_2", p_2, 0.0)
-                        st.success(f"✓ {juez_2} liquidado con ${p_2}")
+                        st.success(f"✓ {juez_2} (3° Juez) liquidado con ${p_2:,.2f}")
                     
                     st.balloons()
                     st.rerun()
-            else:
-                st.error("Completá los nombres de los equipos y por lo menos el Juez Principal.")
 
 if __name__ == "__main__":
     main()
