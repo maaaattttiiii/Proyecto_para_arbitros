@@ -1,36 +1,46 @@
 # app.py
 import streamlit as st
-import datetime
 import pandas as pd
 
-from config import LISTA_ARBITROS, LISTA_CT, LISTA_CATEGORIAS, LISTA_EQUIPOS_MASCULINOS, LISTA_EQUIPOS_FEMENINOS
 from logic import validar_reglas_negocio, calcular_puntaje_final
-from database import inicializar_sistema, conectar_db, guardar_evaluacion_db
+from database import conectar_db, obtener_arbitros, obtener_partidos_pendientes, guardar_evaluacion_db
 
 def campo_evaluacion(label, key):
     col_slider, col_check = st.columns([5, 1])
     with col_check:
         st.write("##") 
-        no_paso = st.checkbox("No paso", value=False, key=f"np_{key}")
+        no_paso = st.checkbox("No pasó", value=False, key=f"np_{key}")
     with col_slider:
         valor = st.slider(label, 1, 10, 5, key=f"sld_{key}", disabled=no_paso)
     return None if no_paso else valor
 
 def renderizar_dashboard():
-    st.header("Analisis de Rendimiento")
-    arbitro_dash = st.selectbox("Seleccionar arbitro para analizar", LISTA_ARBITROS, key="dash_arb")
-    if arbitro_dash != "-- Seleccionar --":
+    st.header("Análisis de Rendimiento")
+    dicc_arbitros = obtener_arbitros()
+    arbitro_dash = st.selectbox("Seleccionar árbitro para analizar", options=list(dicc_arbitros.keys()), key="dash_arb")
+    id_arb = dicc_arbitros[arbitro_dash]
+    
+    if id_arb is not None:
         conn = conectar_db()
-        df = pd.read_sql(f"SELECT fecha, puntaje_final FROM Evaluaciones WHERE arbitro = '{arbitro_dash}' ORDER BY fecha", conn)
+        # Traemos la nota del HUB y la fecha uniéndolo con la tabla Partidos
+        query = f"""
+            SELECT P.fecha, R.puntaje_final 
+            FROM Rendimientos_Hub R 
+            JOIN PARTIDOS P ON R.id_partido = P.id_partido 
+            WHERE R.id_arbitro = {id_arb} 
+            ORDER BY P.fecha
+        """
+        df = pd.read_sql(query, conn)
+        conn.close()
+        
         if not df.empty:
-            st.subheader(f"Evolucion historica de {arbitro_dash}")
+            st.subheader(f"Evolución histórica de {arbitro_dash}")
             st.line_chart(data=df.set_index('fecha'))
             st.metric(label="Promedio General", value=f"{df['puntaje_final'].mean():.2f}")
             if len(df) >= 3 and df.tail(3)['puntaje_final'].mean() < 6.0:
-                st.warning("Alerta: El promedio de los ultimos 3 partidos esta por debajo del estandar.")
+                st.warning("Alerta: El promedio de los últimos 3 partidos está por debajo del estándar.")
         else:
-            st.info("No hay datos cargados para este arbitro.")
-        conn.close()
+            st.info("No hay evaluaciones cargadas para este árbitro.")
 
 def main():
     st.set_page_config(page_title="Legado Arbitral", layout="wide")
@@ -41,11 +51,9 @@ def main():
 
     if not st.session_state.autenticado:
         st.title("🔒 Acceso Restringido")
-        st.write("Por favor, ingresa tus credenciales para continuar.")
-        
         with st.form("login_form"):
             usuario = st.text_input("Usuario")
-            clave = st.text_input("Contrasena", type="password")
+            clave = st.text_input("Contraseña", type="password")
             submit = st.form_submit_button("Ingresar")
             
             if submit:
@@ -53,11 +61,9 @@ def main():
                     st.session_state.autenticado = True
                     st.rerun() 
                 else:
-                    st.error("Usuario o contrasena incorrectos. Intenta de nuevo.")
+                    st.error("Usuario o contraseña incorrectos.")
         return
     # --- FIN SISTEMA DE LOGIN ---
-
-    inicializar_sistema()
     
     col_titulo, col_salir = st.columns([8, 1])
     with col_titulo:
@@ -69,142 +75,116 @@ def main():
             st.rerun()
 
     t_dash, t_gen, t_ctx, t_mec, t_fal, t_vio, t_psi, t_fis, t_save = st.tabs([
-        "Dashboard", "General", "Contexto", "Mecanica", "Faltas", "Violaciones", "Psicologia", "Fisico", "Guardar"
+        "Dashboard", "General", "Contexto", "Mecánica", "Faltas", "Violaciones", "Psicología", "Físico", "Guardar"
     ])
 
-    with t_dash: renderizar_dashboard()
+    with t_dash: 
+        renderizar_dashboard()
 
     with t_gen:
-        st.header("Datos Basicos")
-        fecha = st.date_input("Fecha", max_value=datetime.date.today(), min_value=datetime.date(2024, 1, 1))
+        st.header("Selección de Evento")
+        st.info("Para evaluar, seleccioná un partido programado y el árbitro a observar.")
         
-        categoria = st.selectbox("Categoria", LISTA_CATEGORIAS)
+        dicc_partidos = obtener_partidos_pendientes()
+        dicc_arbitros = obtener_arbitros()
         
-        # --- LOGICA DE BLOQUEO DE EQUIPOS ---
-        categoria_no_elegida = (categoria == "-- Seleccionar --")
-        categorias_femeninas = ["U13F", "U15F", "U17F", "U19F", "SuperligaF", "Liga Femenina"]
+        partido_seleccionado = st.selectbox("Seleccionar Partido", options=list(dicc_partidos.keys()))
+        arbitro_seleccionado = st.selectbox("Árbitro a Evaluar", options=list(dicc_arbitros.keys()))
         
-        if categoria_no_elegida:
-            # Si no eligio categoria, forzamos una lista vacia para no mostrar equipos de mas
-            lista_equipos_dinamica = ["-- Seleccionar --"]
-        elif categoria in categorias_femeninas:
-            lista_equipos_dinamica = LISTA_EQUIPOS_FEMENINOS
-        else:
-            lista_equipos_dinamica = LISTA_EQUIPOS_MASCULINOS
-            
-        c_eq1, c_eq2 = st.columns(2)
-        
-        # Le agregamos la propiedad 'disabled' que apaga el selectbox si categoria_no_elegida es True
-        with c_eq1: 
-            equipo_local = st.selectbox("Equipo Local", lista_equipos_dinamica, disabled=categoria_no_elegida)
-        with c_eq2: 
-            equipo_visitante = st.selectbox("Equipo Visitante", lista_equipos_dinamica, disabled=categoria_no_elegida)
-        # ------------------------------------
-        
-        c1, c2 = st.columns(2)
-        with c1: arbitro = st.selectbox("Arbitro Principal", LISTA_ARBITROS)
-        with c2: companero = st.selectbox("Segundo Juez", LISTA_ARBITROS)
-        c3, c4 = st.columns(2)
-        with c3:
-            hubo_3er = st.checkbox("Hubo Tercer Juez")
-            tercer_juez = st.selectbox("Tercer Juez", LISTA_ARBITROS, disabled=not hubo_3er)
-        with c4:
-            hubo_ct = st.checkbox("Hubo CT")
-            ct = st.selectbox("Comisionado Tecnico", LISTA_CT, disabled=not hubo_ct)
+        # Guardamos los IDs reales en variables de sesión para usarlos al guardar
+        id_partido_actual = dicc_partidos[partido_seleccionado]
+        id_arbitro_actual = dicc_arbitros[arbitro_seleccionado]
 
     with t_ctx:
-        d_descanso = st.number_input("Dias descanso", 0, 30, 2)
+        d_descanso = st.number_input("Días descanso", 0, 30, 2)
         d_km = st.number_input("Distancia (KM)", 0, 1000, 10)
         importancia = st.slider("Importancia", 1, 10, 5)
         conflictividad = st.slider("Conflictividad", 1, 10, 3)
         temp = st.number_input("Temperatura (C)", 0, 50, 24)
-        publico = st.number_input("Publico", 0, 10000, 100)
+        publico = st.number_input("Público", 0, 10000, 100)
         dif_rank = st.slider("Diferencia ranking", 1, 10, 4)
 
     with t_mec:
         st.subheader("Posicionamiento")
-        l_pen = campo_evaluacion("Lider: penetracion", "l_pen")
-        l_reb = campo_evaluacion("Lider: rebote", "l_reb")
+        l_pen = campo_evaluacion("Líder: penetración", "l_pen")
+        l_reb = campo_evaluacion("Líder: rebote", "l_reb")
         s_3pt = campo_evaluacion("Seguidor: tiro 3pt", "s_3pt")
-        c_sin = campo_evaluacion("Centro: sin balon", "c_sin")
-        t_rot = campo_evaluacion("Tiempo rotacion", "t_rot")
-        v_blo = campo_evaluacion("Vision bloqueada", "v_blo")
+        c_sin = campo_evaluacion("Centro: sin balón", "c_sin")
+        t_rot = campo_evaluacion("Tiempo rotación", "t_rot")
+        v_blo = campo_evaluacion("Visión bloqueada", "v_blo")
         saques = campo_evaluacion("Saques", "saques")
         bocina = campo_evaluacion("Tiros bocina", "bocina")
-        c_vis = campo_evaluacion("Comunicacion visual", "c_vis")
+        c_vis = campo_evaluacion("Comunicación visual", "c_vis")
         
         st.markdown("---")
         st.subheader("Calidad del Silbato")
         s_marg = campo_evaluacion("Silbato marginal pitado", "s_marg")
         s_cruz = campo_evaluacion("Silbato cruzado", "s_cruz")
-        s_rap = campo_evaluacion("Silbato rapido", "s_rap")
+        s_rap = campo_evaluacion("Silbato rápido", "s_rap")
         s_eco = campo_evaluacion("Silbato eco", "s_eco")
 
         mecanica = [l_pen, l_reb, s_3pt, c_sin, t_rot, v_blo, saques, bocina, c_vis, s_marg, s_cruz, s_rap, s_eco]
 
     with t_fal:
         faltas = [
-            campo_evaluacion("Bloqueo vs Carga", "b_c"), campo_evaluacion("Manos perimetro", "m_p"),
-            campo_evaluacion("Pantallas ilegales", "p_i"), campo_evaluacion("Invasion cilindro", "i_c"),
+            campo_evaluacion("Bloqueo vs Carga", "b_c"), campo_evaluacion("Manos perímetro", "m_p"),
+            campo_evaluacion("Pantallas ilegales", "p_i"), campo_evaluacion("Invasión cilindro", "i_c"),
             campo_evaluacion("Aterrizaje tirador", "a_t"), campo_evaluacion("Foul de saque", "f_saq"),
             campo_evaluacion("Anti C1/C2", "a_12"), campo_evaluacion("Anti C3/C4", "a_34"),
-            campo_evaluacion("Consistencia Q1/Q4", "c_14"), campo_evaluacion("Compensacion", "comp")
+            campo_evaluacion("Consistencia Q1/Q4", "c_14"), campo_evaluacion("Compensación", "comp")
         ]
 
     with t_vio:
         violaciones = [
             campo_evaluacion("Paso Cero", "p_0"), campo_evaluacion("Caminada salidas", "c_s"),
             campo_evaluacion("Dobles/Acarreos", "d_a"), campo_evaluacion("3 seg zona", "3_s"),
-            campo_evaluacion("Interferencia al cesto", "goal"), campo_evaluacion("Jugar el balon con el pie", "u_p"),
+            campo_evaluacion("Interferencia al cesto", "goal"), campo_evaluacion("Jugar el balón con el pie", "u_p"),
             campo_evaluacion("8 segundos", "8_s"), campo_evaluacion("24 segundos", "24_s")
         ]
 
     with t_psi:
         psicologia = [
             campo_evaluacion("Com. DT Local", "c_l"), campo_evaluacion("Com. DT Visitante", "c_v"),
-            campo_evaluacion("Desescalada conflictos", "d_c"), campo_evaluacion("Manejo publico", "m_p2"),
-            campo_evaluacion("Claridad mesa", "c_m"), campo_evaluacion("Lenguaje presion", "l_p"),
-            campo_evaluacion("Influencia protestas", "i_p"), campo_evaluacion("Momento de pitar tecnica", "t_t")
+            campo_evaluacion("Desescalada conflictos", "d_c"), campo_evaluacion("Manejo público", "m_p2"),
+            campo_evaluacion("Claridad mesa", "c_m"), campo_evaluacion("Lenguaje presión", "l_p"),
+            campo_evaluacion("Influencia protestas", "i_p"), campo_evaluacion("Momento de pitar técnica", "t_t")
         ]
 
     with t_fis:
-        hubo_fisico = st.checkbox("Cargar datos de rendimiento fisico", value=True)
-        
+        hubo_fisico = st.checkbox("Cargar datos de rendimiento físico", value=True)
         if hubo_fisico:
             distancia = st.number_input("Distancia recorrida (KM)", 0.0, 20.0, 4.5, step=0.1)
             sprints = st.number_input("Cantidad sprints", 0, 200, 30)
             fc_prom = st.number_input("FC Promedio", 0, 220, 140)
             fc_pico = st.number_input("FC Pico", 0, 220, 175)
             velocidad = st.number_input("Velocidad Max (KM/H)", 0.0, 40.0, 18.5, step=0.1)
-            fatiga = st.slider("Indice fatiga Q4", 1, 10, 3)
+            fatiga = st.slider("Índice fatiga Q4", 1, 10, 3)
             lucidez = st.slider("Lucidez post-esfuerzo", 1, 10, 5)
-            lesion = st.checkbox("Sufrio lesion")
+            lesion = st.checkbox("Sufrió lesión")
         else:
             distancia = sprints = fc_prom = fc_pico = velocidad = fatiga = lucidez = lesion = None
 
     with t_save:
         st.header("Guardar Reporte")
-        if st.button("Guardar Evaluacion", type="primary"):
-            datos = {
-                'fecha': fecha, 'categoria': categoria, 'arbitro': arbitro, 'companero': companero,
-                'equipo_local': equipo_local, 'equipo_visitante': equipo_visitante,
-                'hubo_3er': hubo_3er, 'tercer_juez': tercer_juez, 'hubo_ct': hubo_ct, 'ct': ct,
-                'final_3er': tercer_juez if (hubo_3er and tercer_juez != "-- Seleccionar --") else None,
-                'final_ct': ct if (hubo_ct and ct != "-- Seleccionar --") else None,
-                'd_descanso': d_descanso, 'd_km': d_km, 'importancia': importancia, 
-                'conflictividad': conflictividad, 'temp': temp, 'publico': publico, 'dif_rank': dif_rank,
-                'mecanica': mecanica, 'faltas': faltas, 'violaciones': violaciones, 'psicologia': psicologia,
-                'hubo_fisico': hubo_fisico, 'distancia': distancia, 'sprints': sprints, 'fc_prom': fc_prom, 
-                'fc_pico': fc_pico, 'velocidad': velocidad, 'fatiga': fatiga, 'lucidez': lucidez, 'lesion': lesion
-            }
+        if id_partido_actual is None or id_arbitro_actual is None:
+            st.warning("⚠️ Debes seleccionar un Partido y un Árbitro en la pestaña 'General' para poder guardar.")
+        else:
+            if st.button("Guardar Evaluación", type="primary"):
+                datos = {
+                    'd_descanso': d_descanso, 'd_km': d_km, 'importancia': importancia, 
+                    'conflictividad': conflictividad, 'temp': temp, 'publico': publico, 'dif_rank': dif_rank,
+                    'mecanica': mecanica, 'faltas': faltas, 'violaciones': violaciones, 'psicologia': psicologia,
+                    'hubo_fisico': hubo_fisico, 'distancia': distancia, 'sprints': sprints, 'fc_prom': fc_prom, 
+                    'fc_pico': fc_pico, 'velocidad': velocidad, 'fatiga': fatiga, 'lucidez': lucidez, 'lesion': lesion
+                }
 
-            errores = validar_reglas_negocio(datos)
-            if errores:
-                for err in errores: st.error(f"Error: {err}")
-            else:
-                puntaje = calcular_puntaje_final([mecanica, faltas, violaciones, psicologia])
-                if guardar_evaluacion_db(datos, puntaje):
-                    st.success(f"Registro exitoso. Puntaje calculado: {puntaje:.2f}/10")
+                errores = validar_reglas_negocio(datos)
+                if errores:
+                    for err in errores: st.error(f"Error: {err}")
+                else:
+                    puntaje = calcular_puntaje_final([mecanica, faltas, violaciones, psicologia])
+                    if guardar_evaluacion_db(id_arbitro_actual, id_partido_actual, datos, puntaje):
+                        st.success(f"Registro exitoso. Puntaje calculado: {puntaje:.2f}/10")
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,6 @@
 import mysql.connector
-import streamlit as st
 
+# Tu lista oficial de árbitros
 arbitros_cabm = {
     "A": ["ROSAS ARIEL", "LEYTON PABLO", "PRADO MICAELA", "MELLADO SEBASTIAN", "OLIVER RODRIGO", "FLORES FRANCISCO", "CALDERON BELEN", "MONTBRUM JOAQUIN", "TORRES JIMENA", "OCHOA ALDO", "CIARAMITARO MILAGROS", "SCONFIENZA MICAELA"],
     "A1": ["FUNES GUILLERMO", "SANCHEZ FEDERICO", "FUNES RAMON", "NARVAEZ FERNANDO", "QUINI MARIELA", "CANER CRISTINA", "PEREZ LUIS", "GILI RODRIGO", "MUÑOZ GONZALO", "FERNANDEZ MARIO", "VONKUNOSKY LUCIA", "GONZALEZ NADIA"],
@@ -12,15 +12,16 @@ arbitros_cabm = {
 
 def migrar():
     try:
+        # Acá usamos los datos exactos que me pasaste recién
         conn = mysql.connector.connect(
-            host=st.secrets["mysql"]["host"],
-            port=int(st.secrets["mysql"]["port"]),
-            user=st.secrets["mysql"]["user"],
-            password=st.secrets["mysql"]["password"]
-            # Sacamos el parámetro 'database' de acá para que no haya conflictos
+            host="mysql-1b1dd353-mnvvargas3-0969.g.aivencloud.com",
+            port=18929,
+            user="avnadmin",
+            password="AVNS_RZDgcXOy7e_VdETAERG",
+            database="legado_arbitral"  # <--- Ahora sí, apuntamos a la correcta
         )
         cursor = conn.cursor()
-        print("Conectado a la nube. Empezando a migrar...")
+        print("Conectado a la base de datos correcta. Inyectando árbitros...")
         
         for categoria, lista in arbitros_cabm.items():
             for nombre_completo in lista:
@@ -28,14 +29,13 @@ def migrar():
                 apellido = partes[0]
                 nombre = partes[1] if len(partes) > 1 else ""
                 
-                # Le aclaramos a MySQL: Metelos DENTRO de legado_arbitral
                 cursor.execute("""
-                    INSERT INTO legado_arbitral.ARBITROS (nombre, apellido, categoria_actual, estado, rol) 
+                    INSERT INTO ARBITROS (nombre, apellido, categoria_actual, estado, rol) 
                     VALUES (%s, %s, %s, 'ACTIVO', 'ARBITRO')
                 """, (nombre, apellido, categoria))
                 
         conn.commit()
-        print("¡Migración exitosa! Andá a fijarte a Workbench.")
+        print("¡Migración exitosa! Los 70 árbitros ya están listos para salir a la cancha.")
     except Exception as e:
         print(f"Error detectado: {e}")
     finally:
