@@ -15,7 +15,8 @@ def conectar_db():
     except Error as e:
         st.error(f"Error de conexión con la nube: {e}")
         return None
-
+    
+@st.cache_data(ttl=600)
 def inicializar_sistema():
     conn = conectar_db()
     if not conn: return
