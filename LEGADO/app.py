@@ -86,7 +86,7 @@ def main():
         return
     # --- FIN SISTEMA DE LOGIN ---
     
-    inicializar_sistema()
+    #inicializar_sistema()
     
     col_titulo, col_salir = st.columns([8, 1])
     with col_titulo:
