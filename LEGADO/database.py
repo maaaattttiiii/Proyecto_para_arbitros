@@ -112,7 +112,7 @@ def obtener_arbitros():
     for arb in arbitros: dicc[arb['nombre_completo']] = arb['id_arbitro']
     return dicc
 
-@st.cache_data(ttl=600)
+
 def obtener_partidos_pendientes():
     conn = conectar_db()
     if not conn: return {"-- Seleccionar --": None}
