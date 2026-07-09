@@ -5,7 +5,7 @@ import pandas as pd
 from logic import validar_reglas_negocio, calcular_puntaje_final
 from database import (inicializar_sistema, conectar_db, obtener_arbitros, 
                       obtener_partidos_pendientes, crear_partido_db, 
-                      asignar_arbitro_partido, calcular_arancel_exacto, guardar_evaluacion_db)
+                      asignar_arbitro_partido, calcular_arancel_exacto, guardar_evaluacion_db, obtener_historial_arbitro)
 
 # --- LISTAS OFICIALES DE CLUBES DE MENDOZA ---
 EQUIPOS_MASCULINOS = [
@@ -53,6 +53,25 @@ def renderizar_dashboard():
         """
         df = pd.read_sql(query, conn)
         conn.close()
+        
+        if not df.empty:
+            st.subheader(f"Evolución histórica de {arbitro_dash}")
+            st.line_chart(data=df.set_index('fecha'))
+            st.metric(label="Promedio General", value=f"{df['puntaje_final'].mean():.2f}")
+            if len(df) >= 3 and df.tail(3)['puntaje_final'].mean() < 6.0:
+                st.warning("Alerta: El promedio de los últimos 3 partidos está por debajo del estándar.")
+        else:
+            st.info("No hay evaluaciones cargadas para este árbitro.")
+
+def renderizar_dashboard():
+    st.header("Análisis de Rendimiento")
+    dicc_arbitros = obtener_arbitros()
+    arbitro_dash = st.selectbox("Seleccionar árbitro para analizar", options=list(dicc_arbitros.keys()), key="dash_arb")
+    id_arb = dicc_arbitros[arbitro_dash]
+    
+    if id_arb is not None:
+        # Reemplazamos toda la lógica de conexión por nuestra función cacheada
+        df = obtener_historial_arbitro(id_arb)
         
         if not df.empty:
             st.subheader(f"Evolución histórica de {arbitro_dash}")

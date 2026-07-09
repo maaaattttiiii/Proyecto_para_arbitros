@@ -2,8 +2,8 @@
 import mysql.connector
 from mysql.connector import Error
 import streamlit as st
+import pandas as pd
 
-@st.cache_resource
 def conectar_db():
     try:
         return mysql.connector.connect(
@@ -16,6 +16,23 @@ def conectar_db():
     except Error as e:
         st.error(f"Error de conexión con la nube: {e}")
         return None
+
+@st.cache_data(ttl=600)
+def obtener_historial_arbitro(id_arb):
+    conn = conectar_db()
+    if not conn: return pd.DataFrame()
+    try:
+        query = f"""
+            SELECT P.fecha, R.puntaje_final 
+            FROM Rendimientos_Hub R 
+            JOIN PARTIDOS P ON R.id_partido = P.id_partido 
+            WHERE R.id_arbitro = {id_arb} 
+            ORDER BY P.fecha
+        """
+        df = pd.read_sql(query, conn)
+        return df
+    finally:
+        conn.close()
     
 @st.cache_data(ttl=600)
 def inicializar_sistema():
