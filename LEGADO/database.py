@@ -3,6 +3,7 @@ import mysql.connector
 from mysql.connector import Error
 import streamlit as st
 
+@st.cache_resource
 def conectar_db():
     try:
         return mysql.connector.connect(
