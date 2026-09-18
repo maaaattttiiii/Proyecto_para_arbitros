@@ -105,7 +105,7 @@ def main():
         return
     # --- FIN SISTEMA DE LOGIN ---
     
-    inicializar_sistema()
+    #inicializar_sistema()
     
     col_titulo, col_salir = st.columns([8, 1])
     with col_titulo:
@@ -229,7 +229,7 @@ def main():
 
     # --- PESTAÑA DE TESORERÍA BLINDADA ---
     with t_tesoreria:
-        st.header("💰 Panel de Registro Expreso de Tesorería")
+        st.header(" Panel de Registro Expreso de Tesorería")
         st.write("Carga los partidos de la semana acá. Las liquidaciones se calculan cruzando el nivel del árbitro con la tabla oficial.")
         
         # 1. Selector de categoría (Se pone primero para mapear los equipos correspondientes)
